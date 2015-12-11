@@ -18,7 +18,7 @@ function update_k!(F,G,Z,priors,i,p,k,r,n)
     end
     num = countnz(cull);
 
-    if num == 0 & all(lind .< 0.995) & k < p # add column
+    if (num == 0) & all(lind .< 0.995) & (k < p) # add column
       k=k+1;
       F[:psijh][:,k] = rand(Gamma(priors[:df]/2,2/priors[:df]),p);
       F[:delta][k] = rand(Gamma(priors[:ad2],1/priors[:bd2]));
@@ -32,9 +32,13 @@ function update_k!(F,G,Z,priors,i,p,k,r,n)
       for j in 1:n F[:scores][k,j] = rand(Normal(0,sqrt(1-F[:h2][k]))); end
       #NumericExtensions.add!(F[:scores][k,:],G[:U][k,:]*Z);
       BLAS.gemm!('N','N',1.0,G[:U][k,:],Z,1.0,view(F[:scores],k,:));
-    elseif num > 0 # drop small columns
-      keep = find(!cull);
+    elseif (num > 0) # drop small columns
       k = max(k-num,1);
+      if (all(cull))
+        keep = [findmax(sumabs2(Labs,1))[2]];
+      else
+        keep = find(!cull);
+      end
       F[:Lambda][:,1:k] = F[:Lambda][:,keep];
       F[:Lambda][:,(k+1):end] = NaN;
       F[:psijh][:,1:k] = F[:psijh][:,keep];
